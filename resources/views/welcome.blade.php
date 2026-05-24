@@ -51,7 +51,7 @@
                                     Live tracking, trusted contacts, SOS, and fake call in one calm flow
                                 </div>
 
-                                <h1 class="max-w-5xl text-balance text-[clamp(2.4rem,7.2vw,5.8rem)] font-semibold leading-[0.95] tracking-normal">
+                                <h1 data-parallax class="max-w-5xl text-balance text-[clamp(2.4rem,7.2vw,5.8rem)] font-semibold leading-[0.95] tracking-normal">
                                     Your smart companion for safer journeys.
                                 </h1>
 
@@ -86,10 +86,21 @@
                                         <span>Fake call set</span>
                                     </div>
                                 </div>
+
+                                <div class="safe-activity-ticker mt-6 w-full max-w-3xl overflow-hidden rounded-2xl border border-white/20 bg-white/10">
+                                    <div class="safe-activity-track">
+                                        <span>Mom received tracking link</span>
+                                        <span>Route check-in successful</span>
+                                        <span>Auto safety timer: active</span>
+                                        <span>ETA updated: 13 min</span>
+                                        <span>Fake call preset: Mom</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
+                <div data-cursor-glow class="safe-cursor-glow" aria-hidden="true"></div>
             </section>
 
             <section id="features" class="relative bg-[#f5f8fb] px-5 py-16 sm:px-8 lg:px-12">
@@ -127,6 +138,48 @@
                             <h3>Auto Safety Alert</h3>
                             <p>Detects long stops, missed check-ins, or route changes and asks whether the user is safe.</p>
                         </article>
+                    </div>
+                </div>
+            </section>
+
+            <section class="safe-simulator-wrap bg-white px-5 py-14 sm:px-8 lg:px-12">
+                <div class="mx-auto grid max-w-7xl gap-8 rounded-[2rem] border border-slate-200 bg-gradient-to-br from-white to-sky-50 p-5 shadow-[0_30px_90px_rgba(15,23,42,0.1)] md:grid-cols-[1.05fr_0.95fr] md:p-8">
+                    <div>
+                        <p class="text-sm font-semibold text-sky-700">Interactive Safety Simulator</p>
+                        <h2 class="mt-3 text-3xl font-semibold leading-tight text-[#0b1220] sm:text-4xl">
+                            Tap scenarios and see how SafeWalk responds in real time.
+                        </h2>
+                        <p class="mt-4 max-w-xl text-slate-600">
+                            This prototype shows the human-centered flow: reassure first, then escalate only when needed.
+                        </p>
+                        <div class="mt-6 grid gap-3 sm:grid-cols-3">
+                            <button type="button" data-scenario-btn="safe" class="safe-scenario-btn is-active">Safe Flow</button>
+                            <button type="button" data-scenario-btn="caution" class="safe-scenario-btn">No Check-in</button>
+                            <button type="button" data-scenario-btn="emergency" class="safe-scenario-btn">Emergency</button>
+                        </div>
+                    </div>
+                    <div class="safe-sim-console">
+                        <div class="safe-sim-top">
+                            <span class="safe-ping safe-ping-a"></span>
+                            <span class="safe-ping safe-ping-b"></span>
+                            <span class="safe-ping safe-ping-c"></span>
+                        </div>
+                        <h3 data-scenario-title class="mt-4 text-xl font-semibold text-slate-900">Status: Safe</h3>
+                        <p data-scenario-output class="mt-2 text-sm leading-6 text-slate-600">Contact notified: Mom is watching your live route and ETA.</p>
+                        <div class="mt-6 grid grid-cols-3 gap-2 text-center">
+                            <div class="safe-kpi">
+                                <strong data-count="98">0</strong>
+                                <span>Trust Score</span>
+                            </div>
+                            <div class="safe-kpi">
+                                <strong data-count="14">0</strong>
+                                <span>ETA (min)</span>
+                            </div>
+                            <div class="safe-kpi">
+                                <strong data-count="3">0</strong>
+                                <span>SOS Hold</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
