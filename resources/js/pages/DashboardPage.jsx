@@ -1,12 +1,22 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { FiShield, FiMapPin, FiUsers, FiClock, FiSettings, FiHome, FiAlertTriangle, FiNavigation, FiPhone, FiLogOut, FiPlus, FiTrash2, FiMap, FiActivity } from 'react-icons/fi';
 
 /* ── Leaflet Map Component ── */
-const LeafletMap = ({ origin, destination, isWalking, onMapReady }) => {
+const LeafletMap = ({ origin, destination, isWalking, trailCoords, routeCoords, currentAccuracy, onMapReady, onMapMoved }) => {
     const mapRef = useRef(null);
     const mapInstance = useRef(null);
     const markersRef = useRef([]);
     const routeLineRef = useRef(null);
+    const onMapReadyRef = useRef(onMapReady);
+    const onMapMovedRef = useRef(onMapMoved);
+
+    useEffect(() => {
+        onMapReadyRef.current = onMapReady;
+    }, [onMapReady]);
+
+    useEffect(() => {
+        onMapMovedRef.current = onMapMoved;
+    }, [onMapMoved]);
 
     useEffect(() => {
         // Load Leaflet CSS
@@ -39,9 +49,12 @@ const LeafletMap = ({ origin, destination, isWalking, onMapReady }) => {
             }).addTo(map);
 
             L.control.zoom({ position: 'bottomright' }).addTo(map);
+            map.on('dragstart zoomstart', () => {
+                if (onMapMovedRef.current) onMapMovedRef.current();
+            });
 
             mapInstance.current = map;
-            if (onMapReady) onMapReady(map);
+            if (onMapReadyRef.current) onMapReadyRef.current(map);
 
             // Force map to recalculate size after a brief delay
             setTimeout(() => map.invalidateSize(), 200);
@@ -76,6 +89,16 @@ const LeafletMap = ({ origin, destination, isWalking, onMapReady }) => {
             });
             const m = L.marker(origin.coords, { icon: startIcon }).addTo(map).bindPopup(`<b>Dari:</b> ${origin.name}`);
             markersRef.current.push(m);
+            if (currentAccuracy && currentAccuracy > 0) {
+                const acc = L.circle(origin.coords, {
+                    radius: Math.min(currentAccuracy, 120),
+                    color: '#3b82f6',
+                    fillColor: '#60a5fa',
+                    fillOpacity: 0.18,
+                    weight: 1,
+                }).addTo(map);
+                markersRef.current.push(acc);
+            }
         }
 
         if (destination) {
@@ -87,20 +110,35 @@ const LeafletMap = ({ origin, destination, isWalking, onMapReady }) => {
             markersRef.current.push(m);
         }
 
-        if (origin && destination) {
-            // Draw simple route line
-            routeLineRef.current = L.polyline([origin.coords, destination.coords], {
-                color: isWalking ? '#f59e0b' : '#3b82f6',
+        if (routeCoords && routeCoords.length > 1) {
+            routeLineRef.current = L.polyline(routeCoords, {
+                color: '#3b82f6',
                 weight: 4,
-                opacity: 0.8,
-                dashArray: isWalking ? null : '10, 8',
+                opacity: 0.75,
+                dashArray: '8, 6',
+            }).addTo(map);
+            map.fitBounds(L.latLngBounds(routeCoords).pad(0.2));
+        }
+
+        if (trailCoords && trailCoords.length > 1) {
+            const trailLine = L.polyline(trailCoords, {
+                color: '#f59e0b',
+                weight: 5,
+                opacity: 0.95,
+            }).addTo(map);
+            markersRef.current.push(trailLine);
+        } else if (origin && destination && (!routeCoords || routeCoords.length < 2)) {
+            routeLineRef.current = L.polyline([origin.coords, destination.coords], {
+                color: '#f59e0b',
+                weight: 4,
+                opacity: 0.9,
             }).addTo(map);
 
             map.fitBounds(L.latLngBounds([origin.coords, destination.coords]).pad(0.3));
         } else if (origin) {
             map.setView(origin.coords, 15);
         }
-    }, [origin, destination, isWalking]);
+    }, [origin, destination, isWalking, trailCoords, routeCoords, currentAccuracy]);
 
     return <div ref={mapRef} style={{ width: '100%', height: '100%', borderRadius: 20, zIndex: 1 }} />;
 };
@@ -119,20 +157,87 @@ const LOCATION_PRESETS = [
     { name: 'Kost Gebang Lor', coords: [-7.2761, 112.7573] },
 ];
 
+const LocationInput = ({ label, color, value, onChange, suggestions, showDropdown, setShowDropdown, onSelect, placeholder, disabled, loading, compact }) => (
+    <div style={{ position: 'relative', flex: 1 }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: compact ? 10 : 12, fontWeight: 700, color: '#64748b', marginBottom: 6 }}>
+            <div style={{ width: 10, height: 10, borderRadius: '50%', background: color }} />
+            {label}
+        </label>
+        <input
+            type="text"
+            placeholder={placeholder}
+            value={value}
+            onChange={(e) => { onChange(e.target.value); setShowDropdown(true); }}
+            onFocus={() => setShowDropdown(true)}
+            disabled={disabled}
+            style={{
+                width: '100%', padding: compact ? '9px 12px' : '12px 16px', borderRadius: compact ? 10 : 14,
+                border: '1.5px solid #e2e8f0', outline: 'none', fontSize: compact ? 12 : 14,
+                background: disabled ? '#f8fafc' : '#fff', transition: 'all 0.2s', boxSizing: 'border-box',
+            }}
+            onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+        />
+        {showDropdown && !disabled && suggestions.length > 0 && (
+            <div style={{
+                position: 'absolute', top: '100%', left: 0, right: 0,
+                background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14,
+                boxShadow: '0 8px 28px rgba(0,0,0,0.12)', maxHeight: 200,
+                overflowY: 'auto', zIndex: 50, marginTop: 4,
+            }}>
+                {suggestions.map(loc => (
+                    <div
+                        key={loc.name}
+                        onClick={() => { onSelect(loc); onChange(loc.name); setShowDropdown(false); }}
+                        style={{
+                            padding: compact ? '8px 12px' : '10px 16px', cursor: 'pointer', fontSize: compact ? 12 : 13,
+                            color: '#1a2d5a', display: 'flex', alignItems: 'center', gap: 8,
+                            borderBottom: '1px solid #f8fafc', transition: 'background 0.15s',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#f0f4ff'}
+                        onMouseLeave={e => e.currentTarget.style.background = '#fff'}
+                    >
+                        <FiMapPin size={14} color={color} />
+                        {loc.name}
+                    </div>
+                ))}
+            </div>
+        )}
+        {loading && !disabled && (
+            <p style={{ margin: '6px 0 0', fontSize: compact ? 10 : 11, color: '#94a3b8' }}>Mencari lokasi...</p>
+        )}
+    </div>
+);
+
 export default function DashboardPage({ user, onLogout, onNavigate }) {
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 820);
     const [activeTab, setActiveTab] = useState('overview');
 
     // Map & Journey state
-    const [originSearch, setOriginSearch] = useState('');
+    const [originSearch, setOriginSearch] = useState('Lokasi saat ini');
     const [destSearch, setDestSearch] = useState('');
     const [origin, setOrigin] = useState(null);
     const [destination, setDestination] = useState(null);
     const [showOriginDropdown, setShowOriginDropdown] = useState(false);
     const [showDestDropdown, setShowDestDropdown] = useState(false);
+    const [geoSuggestions, setGeoSuggestions] = useState([]);
+    const [loadingGeoSuggestions, setLoadingGeoSuggestions] = useState(false);
+    const [gpsError, setGpsError] = useState('');
+    const [currentAccuracy, setCurrentAccuracy] = useState(null);
+    const [currentCoordsText, setCurrentCoordsText] = useState('');
     const [isWalking, setIsWalking] = useState(false);
     const [walkProgress, setWalkProgress] = useState(0);
     const walkTimerRef = useRef(null);
+    const walkFinishedRef = useRef(false);
+    const [trailCoords, setTrailCoords] = useState([]);
+    const [routeCoords, setRouteCoords] = useState([]);
+    const [showRecenterButton, setShowRecenterButton] = useState(false);
+    const [idleAlertOpen, setIdleAlertOpen] = useState(false);
+    const [idleReason, setIdleReason] = useState('');
+    const idleTriggerTimerRef = useRef(null);
+    const idleEscalationTimerRef = useRef(null);
+    const lastMovementAtRef = useRef(null);
+    const mapRef = useRef(null);
+    const mapMovedRef = useRef(false);
 
     // SOS state
     const [sosActive, setSosActive] = useState(false);
@@ -142,6 +247,11 @@ export default function DashboardPage({ user, onLogout, onNavigate }) {
 
     // Fake Call
     const [fakeCallState, setFakeCallState] = useState('idle');
+    const [fakeCaller, setFakeCaller] = useState(null);
+    const [showFakeCallModal, setShowFakeCallModal] = useState(false);
+    const [showSosContactModal, setShowSosContactModal] = useState(false);
+    const [selectedSosContacts, setSelectedSosContacts] = useState([]);
+    const geoWatchRef = useRef(null);
 
     // Guardians and Journeys database-backed states
     const [guardians, setGuardians] = useState([]);
@@ -181,6 +291,103 @@ export default function DashboardPage({ user, onLogout, onNavigate }) {
             onLogout();
         });
     }, []);
+
+    const startGeoWatcher = () => {
+        mapMovedRef.current = false;
+        setShowRecenterButton(false);
+        if (!navigator.geolocation) {
+            setGpsError('GPS tidak didukung di browser ini.');
+            return;
+        }
+        if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+            setGpsError('GPS butuh HTTPS. Buka aplikasi lewat https atau localhost.');
+            return;
+        }
+        if (geoWatchRef.current !== null) navigator.geolocation.clearWatch(geoWatchRef.current);
+        const applyPosition = (position) => {
+            const currentCoords = [position.coords.latitude, position.coords.longitude];
+            setOrigin({ name: 'Lokasi saat ini', coords: currentCoords });
+            setOriginSearch('Lokasi saat ini');
+            setCurrentAccuracy(position.coords.accuracy || null);
+            setCurrentCoordsText(`${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`);
+            setGpsError('');
+            if (mapRef.current && !mapMovedRef.current) mapRef.current.setView(currentCoords, 16);
+        };
+
+        const onInitialError = (err) => {
+            if (err?.code === 1) setGpsError('Izin lokasi ditolak. Izinkan akses lokasi di browser.');
+            else if (err?.code === 2) setGpsError('Lokasi tidak tersedia. Pastikan GPS/perangkat aktif.');
+            else if (err?.code === 3) setGpsError('Permintaan lokasi timeout. Coba lagi di area sinyal bagus.');
+            else setGpsError('Gagal membaca lokasi awal.');
+        };
+
+        navigator.geolocation.getCurrentPosition(
+            applyPosition,
+            () => {
+                navigator.geolocation.getCurrentPosition(
+                    applyPosition,
+                    onInitialError,
+                    { enableHighAccuracy: false, timeout: 20000, maximumAge: 60000 }
+                );
+            },
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        );
+        geoWatchRef.current = navigator.geolocation.watchPosition(
+            (position) => {
+                const currentCoords = [position.coords.latitude, position.coords.longitude];
+                setOrigin({
+                    name: 'Lokasi saat ini',
+                    coords: currentCoords,
+                });
+                setCurrentAccuracy(position.coords.accuracy || null);
+                setCurrentCoordsText(`${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`);
+                setGpsError('');
+                if (mapRef.current && !mapMovedRef.current) mapRef.current.setView(currentCoords, 16);
+            },
+            (err) => {
+                if (err?.code === 1) setGpsError('Izin lokasi ditolak. Izinkan akses lokasi di browser.');
+                else if (err?.code === 2) setGpsError('Lokasi tidak tersedia. Pastikan GPS/perangkat aktif.');
+                else if (err?.code === 3) setGpsError('Permintaan lokasi timeout. Coba lagi di area sinyal bagus.');
+                else setGpsError('Lokasi belum terdeteksi. Aktifkan GPS lalu coba lagi.');
+            },
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 2000 }
+        );
+    };
+
+    useEffect(() => {
+        startGeoWatcher();
+
+        return () => {
+            if (geoWatchRef.current !== null) navigator.geolocation.clearWatch(geoWatchRef.current);
+        };
+    }, []);
+
+    useEffect(() => {
+        const q = destSearch.trim();
+        if (q.length < 3) {
+            setGeoSuggestions([]);
+            return;
+        }
+
+        const timer = setTimeout(async () => {
+            try {
+                setLoadingGeoSuggestions(true);
+                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(q)}&limit=5`);
+                const data = await res.json();
+                const mapped = (data || []).map((item) => ({
+                    name: item.display_name,
+                    coords: [parseFloat(item.lat), parseFloat(item.lon)],
+                }));
+                setGeoSuggestions(mapped);
+            } catch (err) {
+                console.error('Failed to search destination', err);
+            } finally {
+                setLoadingGeoSuggestions(false);
+            }
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [destSearch]);
 
     // Resize handler
     useEffect(() => {
@@ -222,25 +429,125 @@ export default function DashboardPage({ user, onLogout, onNavigate }) {
     };
 
     // Walk simulation
+    useEffect(() => () => clearInterval(walkTimerRef.current), []);
+
     useEffect(() => {
-        if (isWalking) {
-            walkTimerRef.current = setInterval(() => {
-                setWalkProgress(prev => {
-                    if (prev >= 100) {
-                        clearInterval(walkTimerRef.current);
-                        setIsWalking(false);
-                        const routeName = (origin && destination)
-                            ? `${origin.name} → ${destination.name}`
-                            : 'Gedung Teknik ITS → Asrama Mahasiswa ITS';
-                        saveJourney(routeName, 12, 'Completed');
-                        return 100;
-                    }
-                    return prev + 5; // Faster simulation progress (+5% every 250ms)
-                });
-            }, 250);
+        if (!isWalking || !origin || !destination || walkFinishedRef.current) return;
+        const [lat1, lon1] = origin.coords;
+        const [lat2, lon2] = destination.coords;
+        const dLat = (lat2 - lat1) * (Math.PI / 180);
+        const dLon = (lon2 - lon1) * (Math.PI / 180);
+        const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        const meters = 6371000 * c;
+
+        const totalMeters = trailCoords.length > 1
+            ? trailCoords.slice(1).reduce((acc, point, idx) => {
+                const prev = trailCoords[idx];
+                const [a1, o1] = prev;
+                const [a2, o2] = point;
+                const ddLat = (a2 - a1) * (Math.PI / 180);
+                const ddLon = (o2 - o1) * (Math.PI / 180);
+                const aa = Math.sin(ddLat / 2) ** 2 + Math.cos(a1 * (Math.PI / 180)) * Math.cos(a2 * (Math.PI / 180)) * Math.sin(ddLon / 2) ** 2;
+                return acc + (6371000 * 2 * Math.atan2(Math.sqrt(aa), Math.sqrt(1 - aa)));
+            }, 0)
+            : 0;
+        const estimateTotal = Math.max(totalMeters + meters, 1);
+        setWalkProgress(Math.min(99, Math.round((totalMeters / estimateTotal) * 100)));
+
+        if (meters <= 20) {
+            walkFinishedRef.current = true;
+            setWalkProgress(100);
+            setIsWalking(false);
+            saveJourney(`${origin.name} → ${destination.name}`, Math.max(1, Math.round(totalMeters / 75)), 'Completed');
         }
-        return () => clearInterval(walkTimerRef.current);
-    }, [isWalking, origin, destination]);
+    }, [origin, destination, isWalking, trailCoords]);
+
+    useEffect(() => {
+        if (!isWalking) return;
+        if (!navigator.geolocation) return;
+        lastMovementAtRef.current = Date.now();
+        const watchId = navigator.geolocation.watchPosition((position) => {
+            const next = [position.coords.latitude, position.coords.longitude];
+            setOrigin({ name: 'Lokasi saat ini', coords: next });
+            setCurrentAccuracy(position.coords.accuracy || null);
+            if (mapRef.current && !mapMovedRef.current) mapRef.current.setView(next, 16);
+            setTrailCoords((prev) => {
+                if (!prev.length) return [next];
+                const last = prev[prev.length - 1];
+                const moved = Math.abs(last[0] - next[0]) > 0.00003 || Math.abs(last[1] - next[1]) > 0.00003;
+                if (!moved) return prev;
+                lastMovementAtRef.current = Date.now();
+                return [...prev, next];
+            });
+        }, () => {}, { enableHighAccuracy: true, timeout: 10000, maximumAge: 1000 });
+        return () => navigator.geolocation.clearWatch(watchId);
+    }, [isWalking]);
+
+    useEffect(() => {
+        clearTimeout(idleTriggerTimerRef.current);
+        clearTimeout(idleEscalationTimerRef.current);
+        if (!isWalking) return;
+        idleTriggerTimerRef.current = setTimeout(() => {
+            if (!isWalking) return;
+            const last = lastMovementAtRef.current || Date.now();
+            if (Date.now() - last >= 20 * 60 * 1000) {
+                setIdleAlertOpen(true);
+                idleEscalationTimerRef.current = setTimeout(() => {
+                    const token = localStorage.getItem('safewalk_token');
+                    fetch('/api/alerts/idle-whatsapp', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`,
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({ reason: idleReason || 'Tidak menjawab alert 20 menit' })
+                    }).catch(() => {});
+                    setIdleAlertOpen(false);
+                }, 20 * 60 * 1000);
+            }
+        }, 20 * 60 * 1000);
+        return () => {
+            clearTimeout(idleTriggerTimerRef.current);
+            clearTimeout(idleEscalationTimerRef.current);
+        };
+    }, [isWalking, trailCoords.length, idleReason]);
+
+    useEffect(() => {
+        const fetchRoute = async () => {
+            if (!origin || !destination) {
+                setRouteCoords([]);
+                return;
+            }
+            try {
+                const [oLat, oLon] = origin.coords;
+                const [dLat, dLon] = destination.coords;
+                const url = `https://router.project-osrm.org/route/v1/foot/${oLon},${oLat};${dLon},${dLat}?overview=full&geometries=geojson`;
+                const res = await fetch(url);
+                const data = await res.json();
+                const coords = data?.routes?.[0]?.geometry?.coordinates || [];
+                const latLng = coords.map(([lon, lat]) => [lat, lon]);
+                setRouteCoords(latLng);
+            } catch (err) {
+                console.error('Failed to fetch route', err);
+                setRouteCoords([]);
+            }
+        };
+        fetchRoute();
+    }, [origin, destination]);
+
+    const handleMapReady = useCallback((map) => {
+        mapRef.current = map;
+    }, []);
+
+    const handleMapMoved = useCallback(() => {
+        mapMovedRef.current = true;
+        setShowRecenterButton(true);
+    }, []);
 
     // SOS hold
     const startSosHold = () => {
@@ -269,14 +576,72 @@ export default function DashboardPage({ user, onLogout, onNavigate }) {
     };
 
     const startWalk = () => {
-        if (!origin || !destination) return;
-        setWalkProgress(0);
-        setIsWalking(true);
+        const start = async () => {
+            let activeOrigin = origin;
+            let activeDestination = destination;
+
+            if (!activeOrigin && navigator.geolocation) {
+                try {
+                    const pos = await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 }));
+                    activeOrigin = {
+                        name: 'Lokasi saat ini',
+                        coords: [pos.coords.latitude, pos.coords.longitude],
+                    };
+                    setOrigin(activeOrigin);
+                    setOriginSearch('Lokasi saat ini');
+                } catch (err) {
+                    alert('Izin GPS dibutuhkan untuk memulai perjalanan.');
+                    return;
+                }
+            }
+
+            if (!activeDestination && destSearch.trim().length > 2) {
+                const fromPreset = LOCATION_PRESETS.find((l) => l.name.toLowerCase() === destSearch.trim().toLowerCase());
+                if (fromPreset) {
+                    activeDestination = fromPreset;
+                    setDestination(fromPreset);
+                } else {
+                    try {
+                        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(destSearch.trim())}&limit=1`);
+                        const data = await res.json();
+                        if (data?.[0]) {
+                            activeDestination = {
+                                name: data[0].display_name,
+                                coords: [parseFloat(data[0].lat), parseFloat(data[0].lon)],
+                            };
+                            setDestination(activeDestination);
+                            setDestSearch(activeDestination.name);
+                        }
+                    } catch (err) {
+                        console.error('Failed geocoding destination', err);
+                    }
+                }
+            }
+
+            if (!activeOrigin || !activeDestination) {
+                alert('Isi tujuan terlebih dahulu, lalu pilih dari hasil pencarian.');
+                return;
+            }
+
+            setWalkProgress(0);
+            walkFinishedRef.current = false;
+            setTrailCoords(activeOrigin ? [activeOrigin.coords] : []);
+            mapMovedRef.current = false;
+            setShowRecenterButton(false);
+            setIsWalking(true);
+        };
+
+        start();
     };
     const resetWalk = () => {
         clearInterval(walkTimerRef.current);
         setIsWalking(false);
         setWalkProgress(0);
+        setTrailCoords([]);
+        setRouteCoords([]);
+        setIdleAlertOpen(false);
+        clearTimeout(idleTriggerTimerRef.current);
+        clearTimeout(idleEscalationTimerRef.current);
     };
 
     const handleAddGuardian = (e) => {
@@ -332,56 +697,10 @@ export default function DashboardPage({ user, onLogout, onNavigate }) {
         });
     };
 
-    const filteredOrigins = LOCATION_PRESETS.filter(l => l.name.toLowerCase().includes(originSearch.toLowerCase()));
-    const filteredDests = LOCATION_PRESETS.filter(l => l.name.toLowerCase().includes(destSearch.toLowerCase()));
-
-    /* ── Location Input Component ── */
-    const LocationInput = ({ label, icon, color, value, onChange, suggestions, showDropdown, setShowDropdown, onSelect, placeholder }) => (
-        <div style={{ position: 'relative', flex: 1 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: '#64748b', marginBottom: 6 }}>
-                <div style={{ width: 10, height: 10, borderRadius: '50%', background: color }} />
-                {label}
-            </label>
-            <input
-                type="text"
-                placeholder={placeholder}
-                value={value}
-                onChange={(e) => { onChange(e.target.value); setShowDropdown(true); }}
-                onFocus={() => setShowDropdown(true)}
-                style={{
-                    width: '100%', padding: '12px 16px', borderRadius: 14,
-                    border: '1.5px solid #e2e8f0', outline: 'none', fontSize: 14,
-                    background: '#fff', transition: 'all 0.2s', boxSizing: 'border-box',
-                }}
-                onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
-            />
-            {showDropdown && suggestions.length > 0 && (
-                <div style={{
-                    position: 'absolute', top: '100%', left: 0, right: 0,
-                    background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14,
-                    boxShadow: '0 8px 28px rgba(0,0,0,0.12)', maxHeight: 200,
-                    overflowY: 'auto', zIndex: 50, marginTop: 4,
-                }}>
-                    {suggestions.map(loc => (
-                        <div
-                            key={loc.name}
-                            onClick={() => { onSelect(loc); onChange(loc.name); setShowDropdown(false); }}
-                            style={{
-                                padding: '10px 16px', cursor: 'pointer', fontSize: 13,
-                                color: '#1a2d5a', display: 'flex', alignItems: 'center', gap: 8,
-                                borderBottom: '1px solid #f8fafc', transition: 'background 0.15s',
-                            }}
-                            onMouseEnter={e => e.currentTarget.style.background = '#f0f4ff'}
-                            onMouseLeave={e => e.currentTarget.style.background = '#fff'}
-                        >
-                            <FiMapPin size={14} color={color} />
-                            {loc.name}
-                        </div>
-                    ))}
-                </div>
-            )}
-        </div>
-    );
+    const filteredDests = [
+        ...LOCATION_PRESETS.filter(l => l.name.toLowerCase().includes(destSearch.toLowerCase())),
+        ...geoSuggestions,
+    ].slice(0, 8);
 
     /* ── Map + Route Panel ── */
     const renderMapPanel = (height = 400) => (
@@ -395,26 +714,31 @@ export default function DashboardPage({ user, onLogout, onNavigate }) {
 
                 <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
                     <LocationInput
-                        label="DARI" icon={FiMapPin} color="#3b82f6" value={originSearch}
-                        onChange={setOriginSearch} suggestions={filteredOrigins}
+                        label="DARI" color="#3b82f6" value={originSearch}
+                        onChange={setOriginSearch} suggestions={[]}
                         showDropdown={showOriginDropdown} setShowDropdown={setShowOriginDropdown}
-                        onSelect={setOrigin} placeholder="Mau dari mana?"
+                        onSelect={setOrigin} placeholder={gpsError ? 'GPS belum aktif' : 'Mengambil GPS...'} disabled compact={isMobile}
                     />
                     <div style={{ fontSize: 18, color: '#cbd5e1', padding: '0 4px 12px' }}>→</div>
                     <LocationInput
-                        label="KE" icon={FiMapPin} color="#22c55e" value={destSearch}
+                        label="KE" color="#22c55e" value={destSearch}
                         onChange={setDestSearch} suggestions={filteredDests}
                         showDropdown={showDestDropdown} setShowDropdown={setShowDestDropdown}
-                        onSelect={setDestination} placeholder="Mau ke mana?"
+                        onSelect={setDestination} placeholder="Mau ke mana?" loading={loadingGeoSuggestions} compact={isMobile}
                     />
+                    {isMobile && gpsError && (
+                        <button onClick={startGeoWatcher} style={{ border: '1px solid #cbd5e1', background: '#fff', borderRadius: 10, padding: '8px 10px', fontSize: 11, color: '#1e40af', fontWeight: 700 }}>
+                            Aktifkan GPS
+                        </button>
+                    )}
                     <div style={{ paddingBottom: 0 }}>
                         {!isWalking ? (
-                            <button onClick={startWalk} disabled={!origin || !destination} style={{
-                                background: origin && destination ? 'linear-gradient(135deg,#3b82f6,#6366f1)' : '#e2e8f0',
+                            <button onClick={startWalk} disabled={!origin || (!destination && destSearch.trim().length < 2)} style={{
+                                background: origin && (destination || destSearch.trim().length >= 2) ? 'linear-gradient(135deg,#3b82f6,#6366f1)' : '#e2e8f0',
                                 border: 'none', borderRadius: 14, padding: '12px 24px',
-                                color: origin && destination ? '#fff' : '#94a3b8',
-                                fontSize: 14, fontWeight: 700, cursor: origin && destination ? 'pointer' : 'not-allowed',
-                                boxShadow: origin && destination ? '0 4px 14px rgba(99,102,241,0.25)' : 'none',
+                                color: origin && (destination || destSearch.trim().length >= 2) ? '#fff' : '#94a3b8',
+                                fontSize: 14, fontWeight: 700, cursor: origin && (destination || destSearch.trim().length >= 2) ? 'pointer' : 'not-allowed',
+                                boxShadow: origin && (destination || destSearch.trim().length >= 2) ? '0 4px 14px rgba(99,102,241,0.25)' : 'none',
                                 display: 'flex', alignItems: 'center', gap: 6,
                                 whiteSpace: 'nowrap',
                             }}>
@@ -432,6 +756,12 @@ export default function DashboardPage({ user, onLogout, onNavigate }) {
                         )}
                     </div>
                 </div>
+                {gpsError && <p style={{ margin: '8px 0 0', fontSize: isMobile ? 10 : 11, color: '#ef4444' }}>{gpsError}</p>}
+                {!gpsError && currentCoordsText && (
+                    <p style={{ margin: '6px 0 0', fontSize: isMobile ? 10 : 11, color: '#64748b' }}>
+                        GPS: {currentCoordsText}{currentAccuracy ? ` (±${Math.round(currentAccuracy)}m)` : ''}
+                    </p>
+                )}
 
                 {/* Walking progress bar */}
                 {isWalking && (
@@ -455,7 +785,16 @@ export default function DashboardPage({ user, onLogout, onNavigate }) {
 
             {/* Map */}
             <div style={{ height, position: 'relative' }}>
-                <LeafletMap origin={origin} destination={destination} isWalking={isWalking} />
+                <LeafletMap
+                    origin={origin}
+                    destination={destination}
+                    isWalking={isWalking}
+                    trailCoords={trailCoords}
+                    routeCoords={routeCoords}
+                    currentAccuracy={currentAccuracy}
+                    onMapReady={handleMapReady}
+                    onMapMoved={handleMapMoved}
+                />
                 {/* Overlay Status */}
                 <div style={{
                     position: 'absolute', bottom: 16, left: 16,
@@ -473,7 +812,35 @@ export default function DashboardPage({ user, onLogout, onNavigate }) {
                         {sosActive ? '🚨 SOS AKTIF' : isWalking ? `Melacak lokasi... ${walkProgress}%` : walkProgress === 100 ? 'Sampai tujuan!' : 'Siap berangkat'}
                     </span>
                 </div>
+                {showRecenterButton && origin && (
+                    <button
+                        onClick={() => {
+                            if (mapRef.current) mapRef.current.setView(origin.coords, 16);
+                            mapMovedRef.current = false;
+                            setShowRecenterButton(false);
+                        }}
+                        style={{
+                            position: 'absolute', top: 16, right: 16, zIndex: 15,
+                            background: '#1e40af', color: '#fff', border: 'none', borderRadius: 10,
+                            padding: '8px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer'
+                        }}
+                    >
+                        Kembali ke Perjalanan
+                    </button>
+                )}
             </div>
+            {idleAlertOpen && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(9,13,26,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3000, padding: 20 }}>
+                    <div style={{ background: '#fff', borderRadius: 16, padding: 20, width: '100%', maxWidth: 420 }}>
+                        <h3 style={{ margin: '0 0 8px', color: '#1a2d5a' }}>Kamu masih aman?</h3>
+                        <p style={{ margin: '0 0 12px', fontSize: 13, color: '#64748b' }}>Kami mendeteksi kamu diam 20 menit. Sedang isi bensin, makan, istirahat, atau lainnya?</p>
+                        <input value={idleReason} onChange={(e) => setIdleReason(e.target.value)} placeholder="Contoh: Lagi istirahat makan" style={{ width: '100%', padding: 10, borderRadius: 10, border: '1px solid #cbd5e1', marginBottom: 10, boxSizing: 'border-box' }} />
+                        <button onClick={() => { setIdleAlertOpen(false); clearTimeout(idleEscalationTimerRef.current); }} style={{ width: '100%', border: 'none', borderRadius: 10, padding: 10, background: '#16a34a', color: '#fff', fontWeight: 700 }}>
+                            Ya, Saya Aman
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 
@@ -517,7 +884,9 @@ export default function DashboardPage({ user, onLogout, onNavigate }) {
 
             {sosActive && (
                 <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 14, padding: '12px 18px', marginBottom: 14, width: '100%' }}>
-                    <p style={{ color: '#ef4444', fontSize: 13, fontWeight: 700, margin: 0 }}>🚨 Sinyal darurat dikirim ke semua Pelindung!</p>
+                    <p style={{ color: '#ef4444', fontSize: 13, fontWeight: 700, margin: 0 }}>
+                        🚨 Sinyal darurat dikirim ke {selectedSosContacts.length > 0 ? `${selectedSosContacts.length} kontak terpilih` : 'semua Pelindung'}!
+                    </p>
                     <button onClick={() => setSosActive(false)} style={{ marginTop: 8, background: '#ef4444', border: 'none', borderRadius: 10, padding: '6px 16px', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
                         Matikan Alarm
                     </button>
@@ -525,19 +894,19 @@ export default function DashboardPage({ user, onLogout, onNavigate }) {
             )}
 
             <div style={{ display: 'flex', gap: 12, width: '100%' }}>
-                <button onClick={() => setFakeCallState('ringing')} style={{
+                <button onClick={() => setShowFakeCallModal(true)} style={{
                     flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                     background: '#faf5ff', border: '1.5px solid #e9d5ff', borderRadius: 16,
                     padding: '12px 0', color: '#7c3aed', fontSize: 13, fontWeight: 700, cursor: 'pointer',
                 }}>
                     <FiPhone size={14} /> Fake Call
                 </button>
-                <button onClick={() => { setOriginSearch('Gedung Teknik ITS'); setOrigin(LOCATION_PRESETS[0]); setDestSearch('Asrama Mahasiswa ITS'); setDestination(LOCATION_PRESETS[2]); setActiveTab('overview'); }} style={{
+                <button onClick={() => setShowSosContactModal(true)} style={{
                     flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                     background: '#eff6ff', border: '1.5px solid #bfdbfe', borderRadius: 16,
                     padding: '12px 0', color: '#3b82f6', fontSize: 13, fontWeight: 700, cursor: 'pointer',
                 }}>
-                    <FiMap size={14} /> Mulai Rute
+                    <FiAlertTriangle size={14} /> Pilih Kontak SOS
                 </button>
             </div>
         </div>
@@ -651,7 +1020,13 @@ export default function DashboardPage({ user, onLogout, onNavigate }) {
                 <FiClock size={18} color="#3b82f6" /> Riwayat Perjalanan
             </h3>
             <p style={{ fontSize: 12, color: '#94a3b8', margin: '0 0 20px' }}>Log rute dan aktivitas SafeWalk Anda</p>
-            <div style={{ overflowX: 'auto' }}>
+            {journeys.length === 0 && (
+                <div style={{ padding: '20px 16px', border: '1px dashed #cbd5e1', borderRadius: 14, textAlign: 'center', color: '#64748b', fontSize: 13 }}>
+                    Belum ada data riwayat perjalanan.
+                </div>
+            )}
+            {journeys.length > 0 && !isMobile && (
+                <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13 }}>
                     <thead>
                         <tr style={{ borderBottom: '2px solid #f1f5f9' }}>
@@ -684,6 +1059,26 @@ export default function DashboardPage({ user, onLogout, onNavigate }) {
                     </tbody>
                 </table>
             </div>
+            )}
+            {journeys.length > 0 && isMobile && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {journeys.map((l, i) => {
+                        const date = new Date(l.created_at || new Date()).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+                        const statusLabel = l.status === 'Completed' ? 'Aman' : l.status === 'SOS' ? 'SOS Ditekan' : 'Dibatalkan';
+                        const statusColor = l.status === 'Completed' ? '#22c55e' : '#ef4444';
+                        return (
+                            <div key={l.id || i} style={{ border: '1px solid #e8edf5', borderRadius: 14, padding: 12, background: '#f8fafc' }}>
+                                <p style={{ margin: 0, fontSize: 11, color: '#64748b' }}>{date}</p>
+                                <p style={{ margin: '6px 0', fontSize: 13, color: '#1a2d5a', fontWeight: 700 }}>{l.route}</p>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontSize: 12, color: '#64748b' }}>{l.duration_minutes} mnt</span>
+                                    <span style={{ color: statusColor, background: statusColor + '14', padding: '4px 8px', borderRadius: 8, fontSize: 11, fontWeight: 700 }}>{statusLabel}</span>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 
@@ -724,7 +1119,7 @@ export default function DashboardPage({ user, onLogout, onNavigate }) {
             <div style={{ position: 'fixed', inset: 0, background: '#090d1a', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '60px 40px', zIndex: 9999 }}>
                 <div style={{ textAlign: 'center', marginTop: 40 }}>
                     {fakeCallState === 'ringing' && <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, letterSpacing: 1, textTransform: 'uppercase' }}>Panggilan Masuk</p>}
-                    <h2 style={{ color: '#fff', fontSize: 32, fontWeight: 700, marginTop: 10 }}>Mama</h2>
+                    <h2 style={{ color: '#fff', fontSize: 32, fontWeight: 700, marginTop: 10 }}>{fakeCaller?.name || 'Kontak Pilihan'}</h2>
                     <p style={{ color: fakeCallState === 'active' ? '#22c55e' : '#a78bfa', fontSize: 15, marginTop: 8 }}>
                         {fakeCallState === 'active' ? 'Terhubung (00:08)' : 'SafeWalk Sim Escape'}
                     </p>
@@ -740,6 +1135,29 @@ export default function DashboardPage({ user, onLogout, onNavigate }) {
                             <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, marginTop: 10, display: 'block' }}>Jawab</span>
                         </div>
                     )}
+                </div>
+            </div>
+        );
+    };
+
+    const renderContactPickerModal = ({ title, open, onClose, onSelect, multi = false, selectedIds = [] }) => {
+        if (!open) return null;
+        return (
+            <div style={{ position: 'fixed', inset: 0, background: 'rgba(9,13,26,0.6)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: 20 }}>
+                <div style={{ background: '#fff', borderRadius: 20, width: '100%', maxWidth: 420, padding: 20 }}>
+                    <h3 style={{ margin: '0 0 12px', fontSize: 18, color: '#1a2d5a' }}>{title}</h3>
+                    {guardians.length === 0 && <p style={{ margin: 0, color: '#64748b', fontSize: 13 }}>Belum ada kontak pelindung.</p>}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 320, overflowY: 'auto', marginBottom: 14 }}>
+                        {guardians.map((g) => (
+                            <button key={g.id} onClick={() => onSelect(g.id)} style={{ border: selectedIds.includes(g.id) ? '1.5px solid #3b82f6' : '1px solid #e2e8f0', background: selectedIds.includes(g.id) ? '#eff6ff' : '#fff', borderRadius: 12, padding: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <span style={{ fontSize: 20 }}>{g.avatar}</span>
+                                <span style={{ color: '#1a2d5a', fontWeight: 700, fontSize: 13 }}>{g.name}</span>
+                            </button>
+                        ))}
+                    </div>
+                    <button onClick={onClose} style={{ width: '100%', border: 'none', borderRadius: 12, padding: 10, background: '#1a2d5a', color: '#fff', fontWeight: 700 }}>
+                        {multi ? 'Selesai' : 'Tutup'}
+                    </button>
                 </div>
             </div>
         );
@@ -825,6 +1243,27 @@ export default function DashboardPage({ user, onLogout, onNavigate }) {
                         </button>
                     ))}
                 </nav>
+                {renderContactPickerModal({
+                    title: 'Pilih Kontak Fake Call',
+                    open: showFakeCallModal,
+                    onClose: () => setShowFakeCallModal(false),
+                    onSelect: (id) => {
+                        const picked = guardians.find((g) => g.id === id);
+                        setFakeCaller(picked || null);
+                        setShowFakeCallModal(false);
+                        setFakeCallState('ringing');
+                    },
+                })}
+                {renderContactPickerModal({
+                    title: 'Pilih Kontak SOS',
+                    open: showSosContactModal,
+                    onClose: () => setShowSosContactModal(false),
+                    multi: true,
+                    selectedIds: selectedSosContacts,
+                    onSelect: (id) => {
+                        setSelectedSosContacts((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+                    },
+                })}
                 {renderFakeCallOverlay()}
             </div>
         );
@@ -920,7 +1359,7 @@ export default function DashboardPage({ user, onLogout, onNavigate }) {
                                 <FiAlertTriangle size={16} /> {sosHeld ? `${Math.round(sosHoldProgress)}%` : 'SOS'}
                             </button>
                         )}
-                        <button onClick={() => setFakeCallState('ringing')} style={{
+                        <button onClick={() => setShowFakeCallModal(true)} style={{
                             background: '#fff', border: '1px solid #cbd5e1', color: '#1a2d5a',
                             borderRadius: 14, padding: '11px 18px', fontSize: 13, fontWeight: 600,
                             cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
@@ -948,6 +1387,27 @@ export default function DashboardPage({ user, onLogout, onNavigate }) {
                 {activeTab === 'journeys' && renderJourneys()}
                 {activeTab === 'settings' && renderSettings()}
             </main>
+            {renderContactPickerModal({
+                title: 'Pilih Kontak Fake Call',
+                open: showFakeCallModal,
+                onClose: () => setShowFakeCallModal(false),
+                onSelect: (id) => {
+                    const picked = guardians.find((g) => g.id === id);
+                    setFakeCaller(picked || null);
+                    setShowFakeCallModal(false);
+                    setFakeCallState('ringing');
+                },
+            })}
+            {renderContactPickerModal({
+                title: 'Pilih Kontak SOS',
+                open: showSosContactModal,
+                onClose: () => setShowSosContactModal(false),
+                multi: true,
+                selectedIds: selectedSosContacts,
+                onSelect: (id) => {
+                    setSelectedSosContacts((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+                },
+            })}
             {renderFakeCallOverlay()}
         </div>
     );

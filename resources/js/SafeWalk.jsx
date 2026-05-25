@@ -635,7 +635,7 @@ const LandingPage = () => (
             background: 'linear-gradient(160deg, #1a3a6b 0%, #2d5da1 45%, #1e4d8c 100%)',
             display: 'flex', alignItems: 'center', paddingTop: 66,
         }}>
-            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 420, pointerEvents: 'none' }}>
+            <div className="hero-city-illustration" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 420, pointerEvents: 'none' }}>
                 <CityIllustration />
             </div>
 
@@ -664,7 +664,7 @@ const LandingPage = () => (
             <div style={{ maxWidth: 1140, margin: '0 auto', padding: '0 28px', width: '100%', position: 'relative', zIndex: 10 }}>
                 <div className="hero-grid" style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 60, alignItems: 'center' }}>
                     {/* Left text */}
-                    <div>
+                    <div className="hero-copy" style={{ width: '100%' }}>
                         <FadeIn delay={0.1}>
                             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(10px)', borderRadius: 100, padding: '6px 16px', marginBottom: 28, border: '1px solid rgba(255,255,255,0.2)' }}>
                                 <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80', boxShadow: '0 0 8px #4ade80' }}/>
@@ -684,9 +684,8 @@ const LandingPage = () => (
                                 Walk home without fear. SafeWalk keeps you connected to trusted people with live tracking, emergency SOS, and smart safety monitoring.
                             </p>
                         </FadeIn>
-
                         <FadeIn delay={0.45}>
-                            <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 48 }}>
+                            <div className="hero-ctas" style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 48 }}>
                                 <button style={{
                                     background: '#fff', border: 'none', borderRadius: 14, padding: '14px 28px',
                                     color: '#3b82f6', fontSize: 15, fontWeight: 800, cursor: 'pointer',
@@ -699,9 +698,8 @@ const LandingPage = () => (
                                 }}>▶ Watch Demo</button>
                             </div>
                         </FadeIn>
-
                         <FadeIn delay={0.55}>
-                            <div style={{ display: 'flex', gap: 40 }}>
+                            <div className="hero-stats" style={{ display: 'flex', gap: 40 }}>
                                 {[['10K+', 'Safe Journeys'], ['98%', 'Alert Rate'], ['4.9★', 'App Rating']].map(([v, l]) => (
                                     <div key={l}>
                                         <p style={{ fontSize: 26, fontWeight: 800, color: '#fff', margin: 0 }}>{v}</p>
@@ -713,7 +711,7 @@ const LandingPage = () => (
                     </div>
 
                     {/* Phone */}
-                    <FadeIn delay={0.3} from="right" className="hero-phone-fade">
+                    <FadeIn delay={0.3} from="right" className="hero-phone-fade hero-phone-col">
                         <div className="hero-phone-wrapper" style={{ animation: 'float 6s ease-in-out infinite', display: 'flex', justifyContent: 'center', overflow: 'visible' }}>
                             <div style={{ position: 'relative', overflow: 'visible' }}>
                                 <div style={{ position: 'absolute', inset: -40, background: 'radial-gradient(circle,rgba(59,130,246,0.25),transparent 70%)', borderRadius: '50%', pointerEvents: 'none' }}/>
@@ -726,7 +724,7 @@ const LandingPage = () => (
         </section>
 
         {/* ── BRANDS ── */}
-        <section style={{ background: '#fff', padding: '32px 28px', borderBottom: '1px solid #e8edf5' }}>
+        <section className="brand-strip" style={{ background: '#fff', padding: '32px 28px', borderBottom: '1px solid #e8edf5' }}>
             <FadeIn>
                 <div style={{ maxWidth: 1140, margin: '0 auto' }}>
                     <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: 13, fontWeight: 600, marginBottom: 20, textTransform: 'uppercase', letterSpacing: 2 }}>Trusted by communities worldwide</p>
@@ -1139,26 +1137,48 @@ export default function SafeWalk() {
                 
                 @media (max-width: 1000px) {
                     .hero-grid { 
-                        grid-template-columns: 1.2fr 0.8fr !important; 
-                        gap: 24px !important; 
-                        text-align: left !important;
-                        align-items: center !important;
+                        grid-template-columns: 1fr !important; 
+                        gap: 36px !important; 
+                        text-align: center !important;
+                        justify-items: center !important;
+                        padding-top: 20px !important;
+                        padding-bottom: 20px !important;
                     }
                     .hero-grid h1 {
-                        font-size: clamp(28px, 5vw, 40px) !important;
+                        font-size: clamp(32px, 6vw, 48px) !important;
+                        text-align: center !important;
+                        line-height: 1.12 !important;
                     }
                     .hero-grid p {
                         font-size: 15px !important;
-                        margin-bottom: 20px !important;
+                        margin: 0 auto 24px !important;
+                        text-align: center !important;
+                        max-width: 520px !important;
+                        line-height: 1.6 !important;
+                    }
+                    .hero-ctas {
+                        justify-content: center !important;
+                        gap: 14px !important;
+                        margin-bottom: 32px !important;
+                    }
+                    .hero-stats {
+                        justify-content: center !important;
+                        gap: 36px !important;
+                        flex-wrap: wrap !important;
+                        margin: 0 auto 12px !important;
+                    }
+                    .hero-city-illustration {
+                        opacity: 0.35 !important;
                     }
                     .hero-phone-fade {
                         width: 100% !important;
                         display: flex !important;
                         justify-content: center !important;
                         overflow: visible !important;
+                        margin-top: 10px !important;
                     }
                     .hero-phone-wrapper {
-                        transform: scale(0.78) !important;
+                        transform: scale(0.95) !important;
                         transform-origin: center center !important;
                         overflow: visible !important;
                     }
@@ -1170,40 +1190,98 @@ export default function SafeWalk() {
                 }
                 
                 @media (max-width: 680px) {
+                    #hero {
+                        min-height: auto !important;
+                        padding-top: 84px !important;
+                        padding-bottom: 40px !important;
+                    }
                     .hero-grid { 
-                        grid-template-columns: 1fr 160px !important; 
-                        gap: 12px !important; 
-                        padding: 0 !important;
+                        grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+                        grid-template-areas:
+                            "copy copy"
+                            "copy phone" !important;
+                        gap: 14px !important;
+                        text-align: left !important;
+                        align-items: start !important;
+                        justify-items: stretch !important;
+                    }
+                    .hero-copy {
+                        grid-area: copy !important;
+                        min-width: 0 !important;
+                        text-align: center !important;
+                        display: flex !important;
+                        flex-direction: column !important;
+                        align-items: center !important;
+                    }
+                    .hero-phone-col {
+                        grid-area: phone !important;
+                        width: 100% !important;
+                        justify-self: end !important;
                     }
                     .hero-grid h1 {
                         font-size: 24px !important;
                         letter-spacing: -0.8px !important;
-                        margin-bottom: 8px !important;
                         line-height: 1.15 !important;
+                        text-align: center !important;
                     }
                     .hero-grid p {
                         font-size: 13px !important;
-                        line-height: 1.55 !important;
-                        margin-bottom: 14px !important;
+                        line-height: 1.6 !important;
+                        text-align: center !important;
+                        margin: 0 0 16px !important;
                     }
-                    .hero-phone-fade {
-                        overflow: visible !important;
+                    .hero-ctas {
+                        justify-content: flex-start !important;
+                        flex-direction: column !important;
+                        align-items: stretch !important;
+                        width: 100% !important;
+                        max-width: 260px !important;
+                        margin: 0 auto 14px !important;
                     }
+                    .hero-ctas button {
+                        width: 100% !important;
+                        padding: 11px 12px !important;
+                        font-size: 13px !important;
+                    }
+                    .hero-stats {
+                        width: 100% !important;
+                        max-width: 260px !important;
+                        justify-content: space-between !important;
+                        gap: 8px !important;
+                        margin: 6px auto 0 !important;
+                    }
+                    .hero-stats > div {
+                        flex: 1 1 0 !important;
+                        min-width: 0 !important;
+                    }
+                    .hero-stats > div p:first-child { font-size: 16px !important; }
+                    .hero-stats > div p:last-child { font-size: 10px !important; }
                     .hero-phone-wrapper {
-                        transform: scale(0.52) !important;
-                        transform-origin: top center !important;
-                        margin-top: -40px !important;
-                        overflow: visible !important;
+                        transform: scale(0.64) !important;
+                        transform-origin: top right !important;
+                        margin-top: -6px !important;
                     }
-                    .hero-phone-device {
-                        box-shadow: 0 20px 40px rgba(30,60,120,0.18) !important;
+                    .hero-copy > div:first-child { text-align: center !important; }
+                    .hero-phone-col {
+                        margin-top: -140px !important;
+                    }
+                    .brand-strip {
+                        padding: 18px 14px !important;
+                    }
+                    .brand-strip p {
+                        margin-bottom: 12px !important;
+                        font-size: 11px !important;
+                        letter-spacing: 1px !important;
+                    }
+                    .brand-strip span {
+                        font-size: 11px !important;
                     }
                 }
                 
                 @media (max-width: 420px) {
-                    .hero-grid { 
-                        grid-template-columns: 1fr 130px !important; 
-                        gap: 8px !important;
+                    .hero-grid {
+                        grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+                        gap: 10px !important;
                     }
                     .hero-grid h1 {
                         font-size: 20px !important;
@@ -1212,8 +1290,11 @@ export default function SafeWalk() {
                         font-size: 12px !important;
                     }
                     .hero-phone-wrapper {
-                        transform: scale(0.45) !important;
-                        margin-top: -60px !important;
+                        transform: scale(0.54) !important;
+                        margin-top: -10px !important;
+                    }
+                    .hero-phone-col {
+                        margin-top: -120px !important;
                     }
                 }
                 

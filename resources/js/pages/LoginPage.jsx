@@ -93,12 +93,6 @@ export default function LoginPage({ onLogin, onNavigate }) {
         setLoading(false);
     };
 
-    const handleQuickFill = () => {
-        setEmail('jauhar@safewalk.id');
-        setPassword('password');
-        setError('');
-    };
-
     const inputStyle = {
         width: '100%',
         background: 'rgba(255, 255, 255, 0.06)',
@@ -425,24 +419,7 @@ export default function LoginPage({ onLogin, onNavigate }) {
                     </form>
                 )}
 
-                {/* Quick autofill (login only) */}
-                {mode === 'login' && (
-                    <div
-                        onClick={handleQuickFill}
-                        style={{
-                            background: 'rgba(59, 130, 246, 0.08)',
-                            border: '1px solid rgba(59, 130, 246, 0.2)',
-                            borderRadius: 16, padding: '12px 14px',
-                            cursor: 'pointer', display: 'flex', flexDirection: 'column',
-                            alignItems: 'center', gap: 4, transition: 'background 0.2s',
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(59, 130, 246, 0.14)'}
-                        onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(59, 130, 246, 0.08)'}
-                    >
-                        <span style={{ fontSize: 11, color: '#93c5fd', fontWeight: 600 }}>🚀 Demo Login (Klik untuk mengisi)</span>
-                        <span style={{ fontSize: 12, color: '#bfdbfe' }}>jauhar@safewalk.id / password</span>
-                    </div>
-                )}
+
 
                 {/* Divider */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0 16px' }}>

@@ -5,31 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\Guardian;
 use App\Models\Journey;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 
 class DashboardController extends Controller
 {
     public function index(Request $request)
     {
         $user = $request->user();
-
-        // Seed default guardians if none exist
-        if ($user->guardians()->count() === 0) {
-            $user->guardians()->createMany([
-                ['name' => 'Ibu (Mom)', 'phone' => '0812-3456-7890', 'status' => 'Online', 'avatar' => '👩'],
-                ['name' => 'Bapak (Dad)', 'phone' => '0812-9876-5432', 'status' => 'Online', 'avatar' => '👨'],
-                ['name' => 'Pos Satpam Kampus', 'phone' => '0811-1111-2222', 'status' => 'Online', 'avatar' => '👮'],
-            ]);
-        }
-
-        // Seed default journeys if none exist
-        if ($user->journeys()->count() === 0) {
-            $user->journeys()->createMany([
-                ['route' => 'Gedung Teknik ITS → Asrama Mahasiswa ITS', 'duration_minutes' => 12, 'status' => 'Completed', 'started_at' => now()->subDays(1)->subHours(2), 'ended_at' => now()->subDays(1)->subHours(2)->addMinutes(12)],
-                ['route' => 'Perpustakaan ITS → Halte', 'duration_minutes' => 8, 'status' => 'Completed', 'started_at' => now()->subDays(2)->subHours(1), 'ended_at' => now()->subDays(2)->subHours(1)->addMinutes(8)],
-                ['route' => 'Gedung Rektorat ITS → Kost Gebang Lor', 'duration_minutes' => 15, 'status' => 'SOS', 'started_at' => now()->subDays(5)->subHours(4), 'ended_at' => now()->subDays(5)->subHours(4)->addMinutes(15)],
-                ['route' => 'Tunjungan Plaza → Kost Gebang Lor', 'duration_minutes' => 22, 'status' => 'Completed', 'started_at' => now()->subDays(7)->subHours(3), 'ended_at' => now()->subDays(7)->subHours(3)->addMinutes(22)],
-            ]);
-        }
 
         return response()->json([
             'guardians' => $user->guardians,
@@ -90,5 +72,48 @@ class DashboardController extends Controller
         ]);
 
         return response()->json($journey, 21);
+    }
+
+    public function sendIdleAlertWhatsApp(Request $request)
+    {
+        $request->validate([
+            'reason' => 'nullable|string|max:255',
+        ]);
+
+        $user = $request->user();
+        $guardians = $user->guardians()->get();
+
+        if ($guardians->isEmpty()) {
+            return response()->json(['message' => 'No guardians to notify.'], 422);
+        }
+
+        $url = config('services.wa_gateway.url');
+        $token = config('services.wa_gateway.token');
+        if (!$url) {
+            return response()->json(['message' => 'WA gateway URL is not configured.'], 500);
+        }
+
+        $reason = $request->input('reason') ?: 'Tidak ada respons dari pengguna selama 20 menit';
+        $text = "SafeWalk Alert:\n{$user->name} tidak merespons alert perjalanan.\nAlasan: {$reason}\nMohon segera cek kondisi pengguna.";
+
+        $results = [];
+        foreach ($guardians as $guardian) {
+            $payload = [
+                'phone' => $guardian->phone,
+                'message' => $text,
+                'name' => $guardian->name,
+            ];
+            $http = Http::timeout(15);
+            if ($token) $http = $http->withToken($token);
+            $resp = $http->post($url, $payload);
+            $results[] = [
+                'guardian_id' => $guardian->id,
+                'phone' => $guardian->phone,
+                'ok' => $resp->successful(),
+                'status' => $resp->status(),
+            ];
+        }
+
+        return response()->json(['sent' => $results]);
     }
 }

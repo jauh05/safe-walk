@@ -13,4 +13,5 @@ Route::middleware('api.auth')->group(function () {
     Route::post('/guardians', [DashboardController::class, 'addGuardian']);
     Route::delete('/guardians/{id}', [DashboardController::class, 'deleteGuardian']);
     Route::post('/journeys', [DashboardController::class, 'addJourney']);
+    Route::post('/alerts/idle-whatsapp', [DashboardController::class, 'sendIdleAlertWhatsApp']);
 });
