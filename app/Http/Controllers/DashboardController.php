@@ -36,7 +36,7 @@ class DashboardController extends Controller
             'status' => 'Online',
         ]);
 
-        return response()->json($guardian, 21);
+        return response()->json($guardian, 201);
     }
 
     public function deleteGuardian(Request $request, $id)
@@ -45,7 +45,7 @@ class DashboardController extends Controller
         $guardian = $user->guardians()->where('id', $id)->first();
 
         if (!$guardian) {
-            return response()->json(['message' => 'Guardian not found.'], 44);
+            return response()->json(['message' => 'Guardian not found.'], 404);
         }
 
         $guardian->delete();
@@ -71,7 +71,7 @@ class DashboardController extends Controller
             'ended_at' => now(),
         ]);
 
-        return response()->json($journey, 21);
+        return response()->json($journey, 201);
     }
 
     public function sendIdleAlertWhatsApp(Request $request)
