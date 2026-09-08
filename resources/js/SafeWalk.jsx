@@ -537,16 +537,16 @@ const Footer = ({ onNavigate }) => (
                         Join thousands of students and women who already feel safer every night. Download SafeWalk now — it's free.
                     </p>
                     <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap', position: 'relative' }}>
-                        <button style={{
+                        <button type="button" onClick={() => onNavigate('login')} style={{
                             background: '#fff', border: 'none', borderRadius: 14, padding: '14px 32px',
                             color: '#3b82f6', fontSize: 15, fontWeight: 800, cursor: 'pointer',
                             boxShadow: '0 8px 28px rgba(0,0,0,0.18)',
-                        }}>📱 Download App</button>
-                        <button style={{
+                        }}>📱 Get Started</button>
+                        <button type="button" onClick={() => onNavigate('features')} style={{
                             background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.3)',
                             borderRadius: 14, padding: '14px 28px', color: '#fff',
                             fontSize: 15, fontWeight: 600, cursor: 'pointer', backdropFilter: 'blur(10px)',
-                        }}>Learn More →</button>
+                        }}>Explore Features →</button>
                     </div>
                 </div>
             </FadeIn>
@@ -627,7 +627,7 @@ const Footer = ({ onNavigate }) => (
 );
 
 /* ── LANDING PAGE ── */
-const LandingPage = () => (
+const LandingPage = ({ onNavigate }) => (
     <>
         {/* ── HERO ── */}
         <section id="hero" style={{
@@ -690,12 +690,12 @@ const LandingPage = () => (
                                     background: '#fff', border: 'none', borderRadius: 14, padding: '14px 28px',
                                     color: '#3b82f6', fontSize: 15, fontWeight: 800, cursor: 'pointer',
                                     boxShadow: '0 8px 28px rgba(0,0,0,0.18)', letterSpacing: '-0.3px',
-                                }}>Start Journey →</button>
-                                <button style={{
+                                }} onClick={() => onNavigate('login')}>Start Journey →</button>
+                                <button onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })} style={{
                                     background: 'rgba(255,255,255,0.12)', border: '1.5px solid rgba(255,255,255,0.25)',
                                     borderRadius: 14, padding: '14px 24px', color: '#fff',
                                     fontSize: 15, fontWeight: 600, cursor: 'pointer', backdropFilter: 'blur(10px)',
-                                }}>▶ Watch Demo</button>
+                                }}>Explore Features ↓</button>
                             </div>
                         </FadeIn>
                         <FadeIn delay={0.55}>
@@ -894,13 +894,13 @@ const LandingPage = () => (
                                 Fitur perlindungan<br />SafeWalk
                             </h2>
                         </div>
-                        <button style={{ background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: 14, padding: '12px 24px', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', backdropFilter: 'blur(8px)' }}>
+                        <button onClick={() => onNavigate('features')} style={{ background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: 14, padding: '12px 24px', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', backdropFilter: 'blur(8px)' }}>
                             Semua fitur →
                         </button>
                     </div>
                 </FadeIn>
 
-                <div style={{ display: 'flex', gap: 20, alignItems: 'flex-end', overflowX: 'auto', paddingBottom: 16 }}>
+                <div className="protection-card-grid">
                     {[
                         { emoji: '📍', title: 'Live Tracking', sub: 'Lokasi realtime', count: '5 fitur', rotate: '-4deg', mt: 40, tagBg: '#dbeafe', tagColor: '#1d4ed8' },
                         { emoji: '🚨', title: 'Emergency SOS', sub: 'Tekan & kirim', count: '3 mode', rotate: '2deg', mt: 0, tagBg: '#fee2e2', tagColor: '#dc2626' },
@@ -910,8 +910,8 @@ const LandingPage = () => (
                     ].map((c, i) => {
                         const [ref, inView] = useInView();
                         return (
-                            <div ref={ref} key={c.title} style={{
-                                minWidth: 190, background: '#fff', borderRadius: 24,
+                            <button ref={ref} type="button" key={c.title} onClick={() => onNavigate('features')} aria-label={`Pelajari ${c.title}`} style={{
+                                minWidth: 190, background: '#fff', borderRadius: 24, border: 'none', textAlign: 'left',
                                 padding: '22px 18px 18px',
                                 boxShadow: '0 12px 40px rgba(0,0,0,0.18)',
                                 transform: inView ? `rotate(${c.rotate})` : `rotate(${c.rotate}) translateY(40px)`,
@@ -926,7 +926,7 @@ const LandingPage = () => (
                                 <div style={{ display: 'inline-block', background: c.tagBg, borderRadius: 8, padding: '4px 10px' }}>
                                     <span style={{ color: c.tagColor, fontSize: 11, fontWeight: 700 }}>{c.count}</span>
                                 </div>
-                            </div>
+                            </button>
                         );
                     })}
                 </div>
@@ -1117,7 +1117,7 @@ export default function SafeWalk() {
                     </Suspense>
                 );
             default:
-                return <LandingPage />;
+                return <LandingPage onNavigate={navigate} />;
         }
     };
 
@@ -1183,6 +1183,7 @@ export default function SafeWalk() {
                         overflow: visible !important;
                     }
                     .demo-grid { grid-template-columns: 1fr !important; }
+                    .protection-card-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; overflow: visible !important; }
                     .nav-links { display: none !important; }
                     .nav-cta { display: none !important; }
                     .nav-hamburger { display: block !important; }
@@ -1264,6 +1265,20 @@ export default function SafeWalk() {
                     .hero-copy > div:first-child { text-align: center !important; }
                     .hero-phone-col {
                         margin-top: -140px !important;
+                    }
+                    .protection-card-grid {
+                        display: grid !important;
+                        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                        align-items: stretch !important;
+                        gap: 14px !important;
+                        overflow: visible !important;
+                        padding: 4px !important;
+                    }
+                    .protection-card-grid button {
+                        min-width: 0 !important;
+                        width: 100% !important;
+                        margin-top: 0 !important;
+                        transform: none !important;
                     }
                     .brand-strip {
                         padding: 18px 14px !important;
