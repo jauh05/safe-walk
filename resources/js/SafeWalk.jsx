@@ -422,7 +422,7 @@ const Nav = ({ currentPage, onNavigate, isLoggedIn, onLogout }) => {
             boxShadow: scrolled || !isHome ? '0 1px 0 rgba(0,0,0,0.06)' : 'none',
             transition: 'all 0.35s ease',
         }}>
-            <div style={{ maxWidth: 1140, margin: '0 auto', padding: '0 28px', height: 66, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 clamp(18px, 3vw, 32px)', height: 70, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 {/* Logo */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }} onClick={() => onNavigate('home')}>
                     <div style={{ width: 36, height: 36, borderRadius: 11, background: 'linear-gradient(135deg,#3b82f6,#6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, boxShadow: '0 4px 12px rgba(99,102,241,0.3)' }}>🛡️</div>
@@ -1193,124 +1193,31 @@ export default function SafeWalk() {
                 @media (max-width: 680px) {
                     #hero {
                         min-height: auto !important;
-                        padding-top: 84px !important;
-                        padding-bottom: 40px !important;
-                    }
-                    .hero-grid { 
-                        grid-template-columns: repeat(2, minmax(0,1fr)) !important;
-                        grid-template-areas:
-                            "copy copy"
-                            "copy phone" !important;
-                        gap: 14px !important;
-                        text-align: left !important;
-                        align-items: start !important;
-                        justify-items: stretch !important;
-                    }
-                    .hero-copy {
-                        grid-area: copy !important;
-                        min-width: 0 !important;
-                        text-align: center !important;
-                        display: flex !important;
-                        flex-direction: column !important;
-                        align-items: center !important;
-                    }
-                    .hero-phone-col {
-                        grid-area: phone !important;
-                        width: 100% !important;
-                        justify-self: end !important;
-                    }
-                    .hero-grid h1 {
-                        font-size: 24px !important;
-                        letter-spacing: -0.8px !important;
-                        line-height: 1.15 !important;
-                        text-align: center !important;
-                    }
-                    .hero-grid p {
-                        font-size: 13px !important;
-                        line-height: 1.6 !important;
-                        text-align: center !important;
-                        margin: 0 0 16px !important;
-                    }
-                    .hero-ctas {
-                        justify-content: flex-start !important;
-                        flex-direction: column !important;
-                        align-items: stretch !important;
-                        width: 100% !important;
-                        max-width: 260px !important;
-                        margin: 0 auto 14px !important;
-                    }
-                    .hero-ctas button {
-                        width: 100% !important;
-                        padding: 11px 12px !important;
-                        font-size: 13px !important;
-                    }
-                    .hero-stats {
-                        width: 100% !important;
-                        max-width: 260px !important;
-                        justify-content: space-between !important;
-                        gap: 8px !important;
-                        margin: 6px auto 0 !important;
-                    }
-                    .hero-stats > div {
-                        flex: 1 1 0 !important;
-                        min-width: 0 !important;
-                    }
-                    .hero-stats > div p:first-child { font-size: 16px !important; }
-                    .hero-stats > div p:last-child { font-size: 10px !important; }
-                    .hero-phone-wrapper {
-                        transform: scale(0.64) !important;
-                        transform-origin: top right !important;
-                        margin-top: -6px !important;
-                    }
-                    .hero-copy > div:first-child { text-align: center !important; }
-                    .hero-phone-col {
-                        margin-top: -140px !important;
+                        padding-top: 88px !important;
+                        padding-bottom: 48px !important;
                     }
                     .protection-card-grid {
                         display: grid !important;
                         grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
                         align-items: stretch !important;
                         gap: 14px !important;
-                        overflow: visible !important;
                         padding: 4px !important;
                     }
                     .protection-card-grid button {
                         min-width: 0 !important;
                         width: 100% !important;
                         margin-top: 0 !important;
-                        transform: none !important;
-                    }
-                    .brand-strip {
-                        padding: 18px 14px !important;
                     }
                     .brand-strip p {
                         margin-bottom: 12px !important;
                         font-size: 11px !important;
                         letter-spacing: 1px !important;
                     }
-                    .brand-strip span {
-                        font-size: 11px !important;
-                    }
+                    .brand-strip span { font-size: 11px !important; }
                 }
-                
+
                 @media (max-width: 420px) {
-                    .hero-grid {
-                        grid-template-columns: repeat(2, minmax(0,1fr)) !important;
-                        gap: 10px !important;
-                    }
-                    .hero-grid h1 {
-                        font-size: 20px !important;
-                    }
-                    .hero-grid p {
-                        font-size: 12px !important;
-                    }
-                    .hero-phone-wrapper {
-                        transform: scale(0.54) !important;
-                        margin-top: -10px !important;
-                    }
-                    .hero-phone-col {
-                        margin-top: -120px !important;
-                    }
+                    .protection-card-grid { grid-template-columns: 1fr !important; }
                 }
                 
                 @media (min-width: 1001px) {

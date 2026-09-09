@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap');
 @import 'tailwindcss';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
@@ -6,9 +7,103 @@
 @source '../**/*.js';
 @source '../**/*.jsx';
 
-html,
+:root {
+    --ink: #17233f;
+    --muted: #5d6b82;
+    --line: #dfe7f1;
+    --surface: #ffffff;
+    --canvas: #f6f8fc;
+    --brand: #2563eb;
+    --brand-deep: #1e3a6d;
+    --radius-sm: 12px;
+    --radius-md: 18px;
+    --shadow-card: 0 12px 32px rgba(24, 47, 85, 0.08);
+}
+
+* { box-sizing: border-box; }
+
+html { min-height: 100%; scroll-behavior: smooth; }
+
 body,
 #app {
     margin: 0;
     min-height: 100%;
+}
+
+body {
+    background: var(--canvas);
+    color: var(--ink);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+textarea { font: inherit; }
+
+button { min-height: 42px; }
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+    outline: 3px solid rgba(37, 99, 235, 0.32);
+    outline-offset: 3px;
+}
+
+button:not(:disabled) { cursor: pointer; }
+button:disabled { cursor: not-allowed; }
+
+/* Consistent interaction feedback without changing application behavior. */
+button:not(:disabled) { transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease, border-color 160ms ease; }
+button:not(:disabled):hover { transform: translateY(-1px); }
+
+h1, h2, h3 { text-wrap: balance; }
+p { text-wrap: pretty; }
+
+@media (min-width: 901px) {
+    .hero-grid { min-height: 620px; }
+}
+
+@media (max-width: 1000px) {
+    .nav-links, .nav-cta { display: none !important; }
+    .nav-hamburger { display: inline-flex !important; align-items: center; justify-content: center; min-width: 44px; }
+    .hero-grid { grid-template-columns: 1fr !important; gap: 32px !important; justify-items: center; text-align: center; }
+    .hero-copy { display: flex; flex-direction: column; align-items: center; }
+    .hero-grid h1, .hero-grid p { text-align: center !important; }
+    .hero-ctas, .hero-stats { justify-content: center !important; }
+    .hero-phone-col { margin: 0 !important; }
+    .hero-phone-wrapper { transform: none !important; margin: 0 !important; }
+    .floating-badge { display: none !important; }
+    .demo-grid, .feature-section-grid, .about-grid-2, .community-layout { grid-template-columns: 1fr !important; }
+    .emergency-layout, .hiw-demo-section, .hiw-cta-flex { flex-direction: column !important; }
+}
+
+@media (max-width: 680px) {
+    body { font-size: 15px; }
+    .hero-city-illustration { opacity: 0.24 !important; }
+    .hero-grid { gap: 24px !important; }
+    .hero-grid h1 { font-size: clamp(32px, 10vw, 42px) !important; letter-spacing: -1.3px !important; }
+    .hero-grid p { font-size: 15px !important; max-width: 34rem; }
+    .hero-ctas { width: 100%; flex-direction: column; align-items: stretch !important; gap: 10px !important; margin-bottom: 32px !important; }
+    .hero-ctas button { width: 100%; }
+    .hero-stats { width: 100%; justify-content: space-between !important; gap: 8px !important; }
+    .hero-stats > div { flex: 1 1 0; min-width: 0; }
+    .hero-phone-device { transform: scale(0.84); transform-origin: top center; margin-bottom: -70px; }
+    .protection-card-grid, .about-grid-4, .about-grid-5, .safety-stats-grid, .tips-grid { grid-template-columns: 1fr !important; }
+    .privacy-grid, .testi-grid { grid-template-columns: 1fr !important; }
+    .brand-strip { padding-inline: 18px !important; }
+    .brand-strip > div > div { gap: 18px !important; }
+    .comparison-scroll { margin-inline: -18px; padding-inline: 18px; }
+}
+
+@media (max-width: 420px) {
+    .hero-phone-device { transform: scale(0.74); margin-bottom: -115px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
 }
